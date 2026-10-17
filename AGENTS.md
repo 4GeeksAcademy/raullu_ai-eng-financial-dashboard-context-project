@@ -58,6 +58,7 @@ Dashboard de métricas financieras con frontend React + TypeScript y backend Fas
 - Si cambian los cálculos o agregaciones, ampliar las pruebas correspondientes, incluidos los límites de mes y año para fechas.
 - Al añadir filtros o rutas, reutilizar los helpers existentes en lugar de duplicar comportamiento.
 - Mantener README y ejemplos de configuración sincronizados con los archivos existentes.
+- Después de cada nueva implementación, revisar y actualizar el documento pertinente de `memory-bank/` para reflejar el estado vigente. Actualizar `progress.md` con cambios, limitaciones y verificaciones ejecutadas; actualizar `product.md` o `stack.md` cuando cambien el comportamiento del producto o la arquitectura. No afirmar que se ejecutó una verificación si no se hizo.
 
 ## Límites
 
