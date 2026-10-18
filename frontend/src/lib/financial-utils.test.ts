@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeBusinessIncomeComparison,
   computeKPIs,
   computeMonthlyData,
   formatCurrency,
   formatPercent,
 } from "./financial-utils";
-import type { FinancialMovement } from "./financial-types";
+import type {
+  FinancialMovement,
+  MetricsSummaryItem,
+  TopCategoryItem,
+} from "./financial-types";
 
 const sampleMovements: FinancialMovement[] = [
   {
@@ -57,6 +62,44 @@ describe("computeKPIs", () => {
 
     const metrics = computeKPIs(onlyOutcomes);
     expect(metrics.profitPercent).toBe(0);
+  });
+});
+
+describe("computeBusinessIncomeComparison", () => {
+  it("calculates category percentages over all group income", () => {
+    const topCategories: TopCategoryItem[] = [
+      { category: "sales", operation_type: "income", total_amount: 600 },
+      { category: "others", operation_type: "income", total_amount: 200 },
+      { category: "suppliers", operation_type: "outcome", total_amount: 150 },
+    ];
+    const summaries: MetricsSummaryItem[] = [
+      { period: "2026-01", income: 700, outcome: 100, net: 600 },
+      { period: "2026-02", income: 300, outcome: 50, net: 250 },
+    ];
+
+    const comparison = computeBusinessIncomeComparison(
+      "B2B",
+      topCategories,
+      summaries,
+    );
+
+    expect(comparison.businessType).toBe("B2B");
+    expect(comparison.totalIncome).toBe(1000);
+    expect(comparison.categories).toEqual([
+      { category: "sales", totalIncome: 600, percentageOfGroup: 60 },
+      { category: "others", totalIncome: 200, percentageOfGroup: 20 },
+    ]);
+  });
+
+  it("returns zero category percentages when the group has no income", () => {
+    const comparison = computeBusinessIncomeComparison(
+      "B2C",
+      [{ category: "sales", operation_type: "income", total_amount: 0 }],
+      [{ period: "2026-01", income: 0, outcome: 100, net: -100 }],
+    );
+
+    expect(comparison.totalIncome).toBe(0);
+    expect(comparison.categories[0].percentageOfGroup).toBe(0);
   });
 });
 

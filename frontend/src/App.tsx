@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { AlertsTable } from "@/components/dashboard/alerts-table";
+import { B2BvsB2CComparison } from "@/components/dashboard/b2b-b2c-comparison";
 import { KPIRow } from "@/components/dashboard/kpi-row";
 import { IncomeOutcomeChart } from "@/components/dashboard/income-outcome-chart";
 import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart";
 import {
+  type BusinessIncomeComparison,
   type FinancialMovement,
   type KPIMetrics,
   type MetricsAlert,
@@ -12,6 +14,7 @@ import {
   type MonthlyDataPoint,
 } from "@/lib/financial-types";
 import { computeKPIs, computeMonthlyData } from "@/lib/financial-utils";
+import { fetchBusinessIncomeComparisons } from "@/lib/comparison-api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -58,6 +61,9 @@ async function fetchFinancialAlerts(
 }
 
 function App() {
+  const [activeView, setActiveView] = useState<"dashboard" | "comparison">(
+    "dashboard",
+  );
   const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [facets, setFacets] = useState<MetricsFacets | null>(null);
@@ -67,6 +73,9 @@ function App() {
   const [alerts, setAlerts] = useState<MetricsAlert[]>([]);
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [alertsError, setAlertsError] = useState<string | null>(null);
+  const [comparisons, setComparisons] = useState<BusinessIncomeComparison[]>([]);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +84,8 @@ function App() {
     setError(null);
     setAlertsLoading(true);
     setAlertsError(null);
+    setComparisonLoading(true);
+    setComparisonError(null);
     setStartDate(value);
   };
 
@@ -83,7 +94,17 @@ function App() {
     setError(null);
     setAlertsLoading(true);
     setAlertsError(null);
+    setComparisonLoading(true);
+    setComparisonError(null);
     setEndDate(value);
+  };
+
+  const handleViewChange = (view: "dashboard" | "comparison") => {
+    if (view === "comparison") {
+      setComparisonLoading(true);
+      setComparisonError(null);
+    }
+    setActiveView(view);
   };
 
   const handleAlertThresholdChange = (value: number) => {
@@ -141,6 +162,31 @@ function App() {
     return () => controller.abort();
   }, [alertThreshold, startDate, endDate]);
 
+  useEffect(() => {
+    if (activeView !== "comparison" || !facets) return;
+
+    const controller = new AbortController();
+    fetchBusinessIncomeComparisons(
+      startDate,
+      endDate,
+      facets.categories,
+      controller.signal,
+    )
+      .then(setComparisons)
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setComparisonError("No se pudo cargar la comparativa de ingresos.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setComparisonLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [activeView, startDate, endDate, facets]);
+
   return (
     <main className="dark min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -155,31 +201,70 @@ function App() {
             onEndDateChange={handleEndDateChange}
           />
 
+          <div
+            role="tablist"
+            aria-label="Dashboard views"
+            className="flex gap-1 border-b border-border"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === "dashboard"}
+              className={`border-b-2 px-3 py-2 text-sm font-medium ${activeView === "dashboard" ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
+              onClick={() => handleViewChange("dashboard")}
+            >
+              Dashboard
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === "comparison"}
+              className={`border-b-2 px-3 py-2 text-sm font-medium ${activeView === "comparison" ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
+              onClick={() => handleViewChange("comparison")}
+            >
+              Comparativa B2B vs B2C
+            </button>
+          </div>
+
           {error ? (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground">
               {error}
             </div>
           ) : null}
 
-          <section aria-label="Key performance indicators">
-            <KPIRow metrics={metrics} loading={loading} />
-          </section>
+          {activeView === "dashboard" ? (
+            <div role="tabpanel" aria-label="Dashboard">
+              <div className="flex flex-col gap-8">
+                <section aria-label="Key performance indicators">
+                  <KPIRow metrics={metrics} loading={loading} />
+                </section>
 
-          <section
-            aria-label="Financial charts"
-            className="grid grid-cols-1 gap-4 xl:grid-cols-2"
-          >
-            <IncomeOutcomeChart data={monthlyData} loading={loading} />
-            <ProfitPercentChart data={monthlyData} loading={loading} />
-          </section>
+                <section
+                  aria-label="Financial charts"
+                  className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+                >
+                  <IncomeOutcomeChart data={monthlyData} loading={loading} />
+                  <ProfitPercentChart data={monthlyData} loading={loading} />
+                </section>
 
-          <AlertsTable
-            alerts={alerts}
-            threshold={alertThreshold}
-            onThresholdChange={handleAlertThresholdChange}
-            loading={alertsLoading}
-            error={alertsError}
-          />
+                <AlertsTable
+                  alerts={alerts}
+                  threshold={alertThreshold}
+                  onThresholdChange={handleAlertThresholdChange}
+                  loading={alertsLoading}
+                  error={alertsError}
+                />
+              </div>
+            </div>
+          ) : (
+            <section role="tabpanel" aria-label="B2B vs B2C comparison">
+              <B2BvsB2CComparison
+                comparisons={comparisons}
+                loading={comparisonLoading}
+                error={comparisonError}
+              />
+            </section>
+          )}
         </div>
       </div>
     </main>

@@ -25,6 +25,31 @@ export interface MetricsAlert {
   increase_ratio: number
 }
 
+export interface TopCategoryItem {
+  category: Category
+  operation_type: OperationType
+  total_amount: number
+}
+
+export interface MetricsSummaryItem {
+  period: string
+  income: number
+  outcome: number
+  net: number
+}
+
+export interface BusinessIncomeCategory {
+  category: Category
+  totalIncome: number
+  percentageOfGroup: number
+}
+
+export interface BusinessIncomeComparison {
+  businessType: BusinessType
+  totalIncome: number
+  categories: BusinessIncomeCategory[]
+}
+
 export interface KPIMetrics {
   totalIncome: number
   totalOutcome: number
