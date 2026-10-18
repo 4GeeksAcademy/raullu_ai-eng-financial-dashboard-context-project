@@ -1,10 +1,11 @@
 # Estado del proyecto
 
-Este documento separa comportamientos y limitaciones comprobados de los pasos sugeridos. Las pruebas mencionadas existen en el repositorio, pero no se ejecutaron durante esta revisión.
+Este documento separa comportamientos y limitaciones comprobados de los pasos sugeridos. Las verificaciones ejecutadas se registran con sus resultados; no se asume que otras pruebas hayan sido ejecutadas.
 
 ## Qué funciona
 
 - El frontend consulta `GET /api/metrics` con fechas opcionales y `GET /api/metrics/facets` para mostrar el rango disponible. Calcula KPI y agregados mensuales desde los movimientos filtrados y conserva estados de carga y error. ([frontend/src/App.tsx](../frontend/src/App.tsx), [frontend/src/lib/financial-types.ts](../frontend/src/lib/financial-types.ts), [frontend/src/lib/financial-utils.ts](../frontend/src/lib/financial-utils.ts), [frontend/src/components/dashboard/dashboard-header.tsx](../frontend/src/components/dashboard/dashboard-header.tsx))
+- El dashboard consulta `GET /api/metrics/alerts` con umbral y fechas activos y muestra la tabla de anomalías, estados de carga/error y el estado vacío. El cálculo mensual usa los tres meses calendario anteriores contiguos dentro del rango. ([frontend/src/App.tsx](../frontend/src/App.tsx), [frontend/src/components/dashboard/alerts-table.tsx](../frontend/src/components/dashboard/alerts-table.tsx), [backend/app/routes.py](../backend/app/routes.py))
 - Las utilidades financieras tienen pruebas para totales, porcentajes, agregaciones mensuales y orden cronológico. ([frontend/src/lib/financial-utils.test.ts](../frontend/src/lib/financial-utils.test.ts))
 - FastAPI define modelos de respuesta y endpoints para movimientos, facetas, resúmenes, categorías principales, comparaciones, alertas y segmentos B2B/B2C. Los helpers comunes aplican filtros y orden cronológico. ([backend/app/routes.py](../backend/app/routes.py))
 - Las pruebas backend cubren generación, filtros, orden y respuestas de varios endpoints. ([backend/tests/test_routes.py](../backend/tests/test_routes.py))
@@ -13,7 +14,7 @@ Este documento separa comportamientos y limitaciones comprobados de los pasos su
 ## Limitaciones actuales
 
 - La API genera movimientos simulados; el flujo revisado no muestra una conexión con una fuente financiera real ni persistencia. ([backend/app/routes.py](../backend/app/routes.py))
-- El filtro de fechas está disponible en el dashboard; alertas, comparaciones y otros endpoints secundarios aún no se presentan como controles de esa interfaz. ([frontend/src/App.tsx](../frontend/src/App.tsx), [backend/app/routes.py](../backend/app/routes.py))
+- El filtro de fechas y las alertas están disponibles en el dashboard; la comparativa B2B/B2C y otros endpoints secundarios aún no se presentan como controles de esa interfaz. ([frontend/src/App.tsx](../frontend/src/App.tsx), [backend/app/routes.py](../backend/app/routes.py))
 - El encabezado todavía muestra el período fijo `2024 - Full Year`, incluso cuando se selecciona otro rango. ([frontend/src/App.tsx](../frontend/src/App.tsx))
 - El encabezado fija `2024 - Full Year`, pero las fechas generadas dependen de la fecha actual y cubren doce meses completos relativos a ella. ([frontend/src/App.tsx](../frontend/src/App.tsx), [backend/app/routes.py](../backend/app/routes.py))
 - La agregación frontend convierte fechas sin hora con `new Date(...)` y getters locales; en algunas zonas horarias puede asignar una fecha al mes equivocado. Las pruebas actuales no cubren el primer día del mes. ([frontend/src/lib/financial-utils.ts](../frontend/src/lib/financial-utils.ts), [frontend/src/lib/financial-utils.test.ts](../frontend/src/lib/financial-utils.test.ts))
@@ -34,6 +35,15 @@ Estas son propuestas derivadas del código; no implican decisiones de producto n
 6. Decidir si los endpoints secundarios deben integrarse en la interfaz o documentarse como capacidades solo de API.
 7. Corregir la referencia a `frontend/.env.example` o añadir ese archivo.
 8. Ejecutar las verificaciones disponibles: `npm run lint`, `npm test` y `npm run build` desde `frontend`; `pytest` desde `backend`; y, si se requiere comprobar el conjunto, `docker compose up --build`. Los comandos están descritos en [AGENTS.md](../AGENTS.md) y sus scripts frontend en [frontend/package.json](../frontend/package.json).
+
+## Verificaciones de la implementación de alertas
+
+- `docker compose exec backend pytest -q`: 19 pruebas pasaron; apareció una advertencia deprecada de Starlette/httpx.
+- Las pruebas de alertas cubren la ventana de tres meses, continuidad mensual, límites/default del umbral y el rango de fechas activo.
+- `docker compose exec frontend npm test`: 5 pruebas pasaron.
+- `docker compose exec frontend npm run lint`: pasó.
+- `docker compose exec frontend npm run build`: pasó; Vite emitió una advertencia por tamaño de bundle superior a 500 kB.
+- Los criterios se revisaron contra código y pruebas; no se ejecutó una prueba E2E visual del dashboard.
 
 ## Verificaciones de la implementación del filtro de fechas
 

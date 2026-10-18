@@ -3,7 +3,12 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.routes import filter_movements_by_date, generate_mock_movements
+from app.routes import (
+    MetricsSummaryItem,
+    detect_outcome_alerts,
+    filter_movements_by_date,
+    generate_mock_movements,
+)
 
 
 client = TestClient(app)
@@ -205,3 +210,73 @@ def test_metrics_alerts_returns_anomaly_candidates():
             "baseline_average",
             "increase_ratio",
         }
+
+
+def test_detect_outcome_alerts_uses_the_previous_three_months():
+    summary = [
+        MetricsSummaryItem(period=period, income=0, outcome=outcome, net=-outcome)
+        for period, outcome in [
+            ("2025-01", 100),
+            ("2025-02", 100),
+            ("2025-03", 100),
+            ("2025-04", 130),
+            ("2025-05", 180),
+        ]
+    ]
+
+    alerts = detect_outcome_alerts(summary, threshold=0.2)
+
+    assert [alert.period for alert in alerts] == ["2025-04", "2025-05"]
+    assert alerts[0].baseline_average == 100
+    assert alerts[0].increase_ratio == 0.3
+    assert alerts[1].baseline_average == 110
+    assert alerts[1].increase_ratio == 0.6364
+
+
+def test_detect_outcome_alerts_requires_consecutive_calendar_months():
+    summary = [
+        MetricsSummaryItem(period=period, income=0, outcome=outcome, net=-outcome)
+        for period, outcome in [
+            ("2025-01", 100),
+            ("2025-02", 100),
+            ("2025-04", 100),
+            ("2025-05", 200),
+        ]
+    ]
+
+    assert detect_outcome_alerts(summary, threshold=0) == []
+
+
+def test_metrics_alerts_validates_threshold_range_and_default():
+    default_response = client.get("/api/metrics/alerts")
+    explicit_default_response = client.get(
+        "/api/metrics/alerts", params={"threshold": 0.3}
+    )
+
+    assert default_response.status_code == 200
+    assert default_response.json() == explicit_default_response.json()
+    for threshold in (0.01, 1.0):
+        assert client.get(
+            "/api/metrics/alerts", params={"threshold": threshold}
+        ).status_code == 200
+    for threshold in (0.009, 1.001):
+        assert client.get(
+            "/api/metrics/alerts", params={"threshold": threshold}
+        ).status_code == 422
+
+
+def test_metrics_alerts_do_not_use_periods_before_active_date_range():
+    movements = generate_mock_movements(seed=42)
+    target_date = movements[len(movements) // 2].create_date.isoformat()
+
+    response = client.get(
+        "/api/metrics/alerts",
+        params={
+            "threshold": 0.01,
+            "start_date": target_date,
+            "end_date": target_date,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { AlertsTable } from "@/components/dashboard/alerts-table";
 import { KPIRow } from "@/components/dashboard/kpi-row";
 import { IncomeOutcomeChart } from "@/components/dashboard/income-outcome-chart";
 import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart";
 import {
   type FinancialMovement,
   type KPIMetrics,
+  type MetricsAlert,
   type MetricsFacets,
   type MonthlyDataPoint,
 } from "@/lib/financial-types";
@@ -37,25 +39,57 @@ async function fetchFinancialFacets(): Promise<MetricsFacets> {
   return response.json();
 }
 
+async function fetchFinancialAlerts(
+  threshold: number,
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal,
+): Promise<MetricsAlert[]> {
+  const query = new URLSearchParams({ threshold: String(threshold) });
+  if (startDate) query.set("start_date", startDate);
+  if (endDate) query.set("end_date", endDate);
+  const response = await fetch(`${API_BASE_URL}/api/metrics/alerts?${query}`, {
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch financial alerts: ${response.status}`);
+  }
+  return response.json();
+}
+
 function App() {
   const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [facets, setFacets] = useState<MetricsFacets | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [alertThreshold, setAlertThreshold] = useState(0.3);
+  const [alerts, setAlerts] = useState<MetricsAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const handleStartDateChange = (value: string) => {
     setLoading(true);
     setError(null);
+    setAlertsLoading(true);
+    setAlertsError(null);
     setStartDate(value);
   };
 
   const handleEndDateChange = (value: string) => {
     setLoading(true);
     setError(null);
+    setAlertsLoading(true);
+    setAlertsError(null);
     setEndDate(value);
+  };
+
+  const handleAlertThresholdChange = (value: number) => {
+    setAlertsLoading(true);
+    setAlertsError(null);
+    setAlertThreshold(value);
   };
 
   useEffect(() => {
@@ -83,6 +117,29 @@ function App() {
         );
       });
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchFinancialAlerts(
+      alertThreshold,
+      startDate,
+      endDate,
+      controller.signal,
+    )
+      .then(setAlerts)
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setAlertsError("No se pudieron cargar las alertas del backend.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setAlertsLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [alertThreshold, startDate, endDate]);
 
   return (
     <main className="dark min-h-screen bg-background text-foreground">
@@ -115,6 +172,14 @@ function App() {
             <IncomeOutcomeChart data={monthlyData} loading={loading} />
             <ProfitPercentChart data={monthlyData} loading={loading} />
           </section>
+
+          <AlertsTable
+            alerts={alerts}
+            threshold={alertThreshold}
+            onThresholdChange={handleAlertThresholdChange}
+            loading={alertsLoading}
+            error={alertsError}
+          />
         </div>
       </div>
     </main>

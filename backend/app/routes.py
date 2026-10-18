@@ -219,24 +219,35 @@ def calculate_net_value(movements: list[FinancialMovement]) -> float:
 def detect_outcome_alerts(
     summary: list[MetricsSummaryItem],
     threshold: float,
+    group_by: GroupBy = "month",
 ) -> list[MetricsAlert]:
     alerts: list[MetricsAlert] = []
-    historical_outcomes: list[float] = []
-    for item in summary:
-        if historical_outcomes:
-            baseline = sum(historical_outcomes) / len(historical_outcomes)
-            if baseline > 0:
-                increase_ratio = (item.outcome - baseline) / baseline
-                if increase_ratio > threshold:
-                    alerts.append(
-                        MetricsAlert(
-                            period=item.period,
-                            outcome_total=round(item.outcome, 2),
-                            baseline_average=round(baseline, 2),
-                            increase_ratio=round(increase_ratio, 4),
-                        )
+    for index in range(3, len(summary)):
+        item = summary[index]
+        previous_periods = summary[index - 3 : index]
+        if group_by == "month":
+            current_month = date.fromisoformat(f"{item.period}-01")
+            current_month_index = current_month.year * 12 + current_month.month - 1
+            expected_periods = []
+            for months_ago in (3, 2, 1):
+                previous_month_index = current_month_index - months_ago
+                year, month_index = divmod(previous_month_index, 12)
+                expected_periods.append(f"{year:04d}-{month_index + 1:02d}")
+            if [period.period for period in previous_periods] != expected_periods:
+                continue
+
+        baseline = sum(period.outcome for period in previous_periods) / 3
+        if baseline > 0:
+            increase_ratio = (item.outcome - baseline) / baseline
+            if increase_ratio > threshold:
+                alerts.append(
+                    MetricsAlert(
+                        period=item.period,
+                        outcome_total=round(item.outcome, 2),
+                        baseline_average=round(baseline, 2),
+                        increase_ratio=round(increase_ratio, 4),
                     )
-        historical_outcomes.append(item.outcome)
+                )
     return alerts
 
 
@@ -341,7 +352,7 @@ def get_metrics_comparison(
 
 @router.get("/api/metrics/alerts", response_model=list[MetricsAlert])
 def get_metrics_alerts(
-    threshold: float = Query(default=0.3, ge=0),
+    threshold: float = Query(default=0.3, ge=0.01, le=1.0),
     group_by: GroupBy = Query(default="month"),
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
@@ -356,7 +367,7 @@ def get_metrics_alerts(
         movements, start_date, end_date, category=None, operation_type=None
     )
     summary = summarize_movements(filtered, group_by)
-    return detect_outcome_alerts(summary, threshold)
+    return detect_outcome_alerts(summary, threshold, group_by)
 
 
 @router.get("/api/metrics/b2b", response_model=list[FinancialMovement])

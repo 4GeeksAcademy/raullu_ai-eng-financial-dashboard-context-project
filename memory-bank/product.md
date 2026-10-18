@@ -10,10 +10,11 @@ Dashboard web de métricas financieras. La interfaz consulta movimientos a una A
 - Gráfico mensual de ingresos frente a egresos y gráfico mensual de margen.
 - Estados de carga y error para la consulta de datos.
 - Filtro opcional de fecha de inicio y fin para KPI y gráficos, con el rango disponible mostrado junto a los campos.
+- Tabla de alertas de gasto con umbral configurable y estado vacío explícito.
 - Los cálculos de beneficio usan ingresos menos egresos; el porcentaje mostrado es beneficio dividido entre ingresos, o cero si no hay ingresos.
 - Los importes se formatean en dólares estadounidenses.
 
-La página consulta `GET /api/metrics` con fechas opcionales y `GET /api/metrics/facets` para mostrar el rango disponible. Calcula los indicadores y agregados mensuales a partir de los movimientos filtrados en el frontend.
+La página consulta `GET /api/metrics` con fechas opcionales y `GET /api/metrics/facets` para mostrar el rango disponible. Calcula los indicadores y agregados mensuales a partir de los movimientos filtrados en el frontend. También consulta `GET /api/metrics/alerts` con el mismo rango y un umbral configurable para mostrar anomalías de gasto mensuales calculadas con los tres meses anteriores dentro del rango.
 
 ## Datos y API
 
@@ -28,7 +29,7 @@ El encabezado de la interfaz sigue fijado en `2024 - Full Year`, aunque los movi
 
 ## Límites de lo verificado
 
-El código revisado no permite afirmar que el producto procese datos reales, los persista, autentique usuarios, se integre con un sistema contable o esté dirigido a un perfil específico. Tampoco permite atribuir a la interfaz filtros, alertas o comparaciones que solo están disponibles como endpoints.
+El código revisado no permite afirmar que el producto procese datos reales, los persista, autentique usuarios, se integre con un sistema contable o esté dirigido a un perfil específico. La comparativa B2B/B2C aún no está disponible como vista de la interfaz.
 
 ## Referencias del repositorio
 
