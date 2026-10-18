@@ -36,7 +36,8 @@ def test_health_endpoint_returns_ok():
 def test_metrics_endpoint_respects_date_filters():
     base_response = client.get("/api/metrics")
     assert base_response.status_code == 200
-    first_date = base_response.json()[0]["create_date"]
+    movements = base_response.json()
+    first_date = movements[0]["create_date"]
 
     response = client.get(
         "/api/metrics",
@@ -47,6 +48,23 @@ def test_metrics_endpoint_respects_date_filters():
     payload = response.json()
     assert payload
     assert all(item["create_date"] == first_date for item in payload)
+
+    middle_date = movements[len(movements) // 2]["create_date"]
+    start_only_response = client.get(
+        "/api/metrics", params={"start_date": middle_date}
+    )
+    end_only_response = client.get(
+        "/api/metrics", params={"end_date": middle_date}
+    )
+
+    assert start_only_response.status_code == 200
+    assert all(
+        item["create_date"] >= middle_date for item in start_only_response.json()
+    )
+    assert end_only_response.status_code == 200
+    assert all(
+        item["create_date"] <= middle_date for item in end_only_response.json()
+    )
 
 
 def test_b2b_endpoint_only_returns_b2b_records():

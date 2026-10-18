@@ -6,16 +6,33 @@ import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart"
 import {
   type FinancialMovement,
   type KPIMetrics,
+  type MetricsFacets,
   type MonthlyDataPoint,
 } from "@/lib/financial-types";
 import { computeKPIs, computeMonthlyData } from "@/lib/financial-utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-async function fetchFinancialData(): Promise<FinancialMovement[]> {
-  const response = await fetch(`${API_BASE_URL}/api/metrics`);
+async function fetchFinancialData(
+  startDate: string,
+  endDate: string,
+): Promise<FinancialMovement[]> {
+  const query = new URLSearchParams();
+  if (startDate) query.set("start_date", startDate);
+  if (endDate) query.set("end_date", endDate);
+  const queryString = query.toString();
+  const url = `${API_BASE_URL}/api/metrics${queryString ? `?${queryString}` : ""}`;
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch financial data: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function fetchFinancialFacets(): Promise<MetricsFacets> {
+  const response = await fetch(`${API_BASE_URL}/api/metrics/facets`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch financial facets: ${response.status}`);
   }
   return response.json();
 }
@@ -23,11 +40,26 @@ async function fetchFinancialData(): Promise<FinancialMovement[]> {
 function App() {
   const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
+  const [facets, setFacets] = useState<MetricsFacets | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handleStartDateChange = (value: string) => {
+    setLoading(true);
+    setError(null);
+    setStartDate(value);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setLoading(true);
+    setError(null);
+    setEndDate(value);
+  };
+
   useEffect(() => {
-    fetchFinancialData()
+    fetchFinancialData(startDate, endDate)
       .then((movements) => {
         setMetrics(computeKPIs(movements));
         setMonthlyData(computeMonthlyData(movements));
@@ -40,13 +72,31 @@ function App() {
       .finally(() => {
         setLoading(false);
       });
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    fetchFinancialFacets()
+      .then(setFacets)
+      .catch(() => {
+        setError(
+          "No se pudo cargar la informacion financiera. Revisa la API de backend.",
+        );
+      });
   }, []);
 
   return (
     <main className="dark min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8">
-          <DashboardHeader period="2024 - Full Year" />
+          <DashboardHeader
+            period="2024 - Full Year"
+            startDate={startDate}
+            endDate={endDate}
+            minDate={facets?.min_date ?? null}
+            maxDate={facets?.max_date ?? null}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+          />
 
           {error ? (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground">
