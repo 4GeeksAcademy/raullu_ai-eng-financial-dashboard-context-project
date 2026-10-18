@@ -44,6 +44,12 @@ Dashboard de métricas financieras con frontend React + TypeScript y backend Fas
 - Reutilizar en las rutas los helpers compartidos de filtrado y ordenamiento de movimientos.
 - En el frontend, representar explícitamente los estados de carga y error de las solicitudes API.
 
+## Trabajo con especificaciones
+
+- Antes de modificar código o documentación, hacer sugerencias, analizar o revisar una funcionalidad, o responder cualquier consulta sobre una especificación concreta, leer primero su `spec.md` correspondiente en `frontend/specs/<spec-id>/`.
+- Leer también `plan.md` y `tasks.md` de esa carpeta cuando existan, para respetar el alcance acordado y el estado de las tareas.
+- Si el trabajo afecta varias funcionalidades, revisar primero la documentación de cada spec afectada. No asumir requisitos de una spec a partir de otra.
+
 ## Reglas de dominio
 
 - Los tipos de operación son `income` y `outcome`; los tipos de negocio son `B2B` y `B2C`.
