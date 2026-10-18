@@ -1,7 +1,11 @@
 import {
   type FinancialMovement,
+  type BusinessIncomeComparison,
+  type BusinessType,
   type KPIMetrics,
+  type MetricsSummaryItem,
   type MonthlyDataPoint,
+  type TopCategoryItem,
 } from "./financial-types";
 
 function toYearMonthKey(value: Date): string {
@@ -31,6 +35,24 @@ export function computeKPIs(movements: FinancialMovement[]): KPIMetrics {
   const profitPercent = totalIncome > 0 ? (profit / totalIncome) * 100 : 0;
 
   return { totalIncome, totalOutcome, profit, profitPercent };
+}
+
+export function computeBusinessIncomeComparison(
+  businessType: BusinessType,
+  topCategories: TopCategoryItem[],
+  summaries: MetricsSummaryItem[],
+): BusinessIncomeComparison {
+  const totalIncome = summaries.reduce((sum, item) => sum + item.income, 0);
+  const categories = topCategories
+    .filter((item) => item.operation_type === "income")
+    .map((item) => ({
+      category: item.category,
+      totalIncome: item.total_amount,
+      percentageOfGroup:
+        totalIncome > 0 ? (item.total_amount / totalIncome) * 100 : 0,
+    }));
+
+  return { businessType, totalIncome, categories };
 }
 
 export function computeMonthlyData(
