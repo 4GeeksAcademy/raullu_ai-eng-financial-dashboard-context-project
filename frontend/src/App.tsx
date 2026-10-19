@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { AlertsTable } from "@/components/dashboard/alerts-table";
 import { B2BvsB2CComparison } from "@/components/dashboard/b2b-b2c-comparison";
@@ -107,6 +107,27 @@ function App() {
     setActiveView(view);
   };
 
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentView: "dashboard" | "comparison",
+  ) => {
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextView =
+      event.key === "Home"
+        ? "dashboard"
+        : event.key === "End"
+          ? "comparison"
+          : currentView === "dashboard"
+            ? "comparison"
+            : "dashboard";
+    handleViewChange(nextView);
+    document.getElementById(`${nextView}-tab`)?.focus();
+  };
+
   const handleAlertThresholdChange = (value: number) => {
     setAlertsLoading(true);
     setAlertsError(null);
@@ -209,7 +230,11 @@ function App() {
             <button
               type="button"
               role="tab"
+              id="dashboard-tab"
+              aria-controls="dashboard-panel"
               aria-selected={activeView === "dashboard"}
+              tabIndex={activeView === "dashboard" ? 0 : -1}
+              onKeyDown={(event) => handleTabKeyDown(event, "dashboard")}
               className={`border-b-2 px-3 py-2 text-sm font-medium ${activeView === "dashboard" ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
               onClick={() => handleViewChange("dashboard")}
             >
@@ -218,29 +243,38 @@ function App() {
             <button
               type="button"
               role="tab"
+              id="comparison-tab"
+              aria-controls="comparison-panel"
               aria-selected={activeView === "comparison"}
+              tabIndex={activeView === "comparison" ? 0 : -1}
+              onKeyDown={(event) => handleTabKeyDown(event, "comparison")}
               className={`border-b-2 px-3 py-2 text-sm font-medium ${activeView === "comparison" ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
               onClick={() => handleViewChange("comparison")}
             >
-              Comparativa B2B vs B2C
+              <span lang="es">Comparativa B2B vs B2C</span>
             </button>
           </div>
 
+          <p role="status" aria-live="polite" className="sr-only">
+            {loading ? "Loading financial data..." : ""}
+          </p>
+
           {error ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground">
-              {error}
+            <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground">
+              <span lang="es">{error}</span>
             </div>
           ) : null}
 
           {activeView === "dashboard" ? (
-            <div role="tabpanel" aria-label="Dashboard">
+            <div role="tabpanel" id="dashboard-panel" aria-labelledby="dashboard-tab" tabIndex={0}>
               <div className="flex flex-col gap-8">
-                <section aria-label="Key performance indicators">
+                <section aria-label="Key performance indicators" aria-busy={loading}>
                   <KPIRow metrics={metrics} loading={loading} />
                 </section>
 
                 <section
                   aria-label="Financial charts"
+                  aria-busy={loading}
                   className="grid grid-cols-1 gap-4 xl:grid-cols-2"
                 >
                   <IncomeOutcomeChart data={monthlyData} loading={loading} />
@@ -257,7 +291,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <section role="tabpanel" aria-label="B2B vs B2C comparison">
+            <section role="tabpanel" id="comparison-panel" aria-labelledby="comparison-tab" tabIndex={0}>
               <B2BvsB2CComparison
                 comparisons={comparisons}
                 loading={comparisonLoading}

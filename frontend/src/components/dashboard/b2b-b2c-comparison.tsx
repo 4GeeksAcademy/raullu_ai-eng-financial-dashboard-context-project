@@ -38,7 +38,7 @@ export function B2BvsB2CComparison({
   if (error) {
     return (
       <p role="alert" className="py-10 text-center text-sm text-destructive">
-        {error}
+        <span lang="es">{error}</span>
       </p>
     );
   }
@@ -104,8 +104,9 @@ export function B2BvsB2CComparison({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
+          <div role="img" aria-label="Total income by business line. Detailed values follow in a data table.">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--color-border)"
@@ -120,8 +121,26 @@ export function B2BvsB2CComparison({
                 fill="var(--chart-income)"
                 radius={[4, 4, 0, 0]}
               />
-            </BarChart>
-          </ResponsiveContainer>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <table className="sr-only">
+            <caption>Total income by business line</caption>
+            <thead>
+              <tr>
+                <th scope="col">Business type</th>
+                <th scope="col">Total income</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chartData.map((item) => (
+                <tr key={item.businessType}>
+                  <th scope="row">{item.businessType}</th>
+                  <td>{formatCurrency(item.totalIncome)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </CardContent>
       </Card>
     </div>

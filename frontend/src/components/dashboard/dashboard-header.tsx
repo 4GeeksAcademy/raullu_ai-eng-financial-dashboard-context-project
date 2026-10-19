@@ -40,7 +40,7 @@ export function DashboardHeader({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            <span>Fecha de inicio</span>
+            <span lang="es">Fecha de inicio</span>
             <input
               type="date"
               value={startDate}
@@ -49,7 +49,7 @@ export function DashboardHeader({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            <span>Fecha de fin</span>
+            <span lang="es">Fecha de fin</span>
             <input
               type="date"
               value={endDate}
@@ -60,7 +60,7 @@ export function DashboardHeader({
         </div>
         {minDate && maxDate ? (
           <p className="text-xs text-muted-foreground">
-            Disponible: {minDate} - {maxDate}
+            <span lang="es">Disponible:</span> {minDate} - {maxDate}
           </p>
         ) : null}
       </div>

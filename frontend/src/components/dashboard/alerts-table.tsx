@@ -52,7 +52,7 @@ export function AlertsTable({
           </p>
         ) : error ? (
           <p role="alert" className="py-6 text-center text-sm text-destructive">
-            {error}
+            <span lang="es">{error}</span>
           </p>
         ) : alerts.length === 0 ? (
           <p role="status" className="py-6 text-center text-sm text-muted-foreground">
