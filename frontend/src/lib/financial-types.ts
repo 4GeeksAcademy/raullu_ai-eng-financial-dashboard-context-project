@@ -2,6 +2,15 @@ export type OperationType = 'income' | 'outcome'
 export type Category = 'suppliers' | 'sales' | 'operational' | 'administrative' | 'others'
 export type BusinessType = 'B2B' | 'B2C'
 
+export type DashboardView = 'dashboard' | 'comparison'
+
+export interface DashboardUrlState {
+  view: DashboardView
+  startDate: string
+  endDate: string
+  alertThreshold: number
+}
+
 export interface FinancialMovement {
   create_date: string // ISO date
   amount: number

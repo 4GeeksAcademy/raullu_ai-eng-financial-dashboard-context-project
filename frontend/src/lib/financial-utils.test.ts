@@ -6,6 +6,8 @@ import {
   computeMonthlyData,
   formatCurrency,
   formatPercent,
+  readDashboardUrlState,
+  writeDashboardUrlState,
 } from "./financial-utils";
 import type {
   FinancialMovement,
@@ -36,6 +38,43 @@ const sampleMovements: FinancialMovement[] = [
     business_type: "B2C",
   },
 ];
+
+describe("dashboard URL state", () => {
+  it("reads view and filters from the query string", () => {
+    expect(
+      readDashboardUrlState(
+        "?view=comparison&start_date=2026-01-01&end_date=2026-03-31&threshold=0.5",
+      ),
+    ).toEqual({
+      view: "comparison",
+      startDate: "2026-01-01",
+      endDate: "2026-03-31",
+      alertThreshold: 0.5,
+    });
+  });
+
+  it("uses defaults for absent or invalid values", () => {
+    expect(readDashboardUrlState("?view=unknown&threshold=5&utm_source=report")).toEqual({
+      view: "dashboard",
+      startDate: "",
+      endDate: "",
+      alertThreshold: 0.3,
+    });
+  });
+
+  it("preserves unrelated parameters and omits default filters", () => {
+    const search = writeDashboardUrlState("?utm_source=report&start_date=2026-01-01", {
+      view: "comparison",
+      startDate: "",
+      endDate: "2026-03-31",
+      alertThreshold: 0.3,
+    });
+
+    expect(new URLSearchParams(search)).toEqual(
+      new URLSearchParams("?utm_source=report&view=comparison&end_date=2026-03-31"),
+    );
+  });
+});
 
 describe("computeKPIs", () => {
   it("calculates totals and profit values", () => {

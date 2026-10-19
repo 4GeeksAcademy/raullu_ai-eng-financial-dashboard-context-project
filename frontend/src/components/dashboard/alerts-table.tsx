@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MetricsAlert } from "@/lib/financial-types";
 import { formatCurrency, formatPercent } from "@/lib/financial-utils";
@@ -17,6 +18,18 @@ export function AlertsTable({
   loading,
   error,
 }: AlertsTableProps) {
+  const [thresholdInput, setThresholdInput] = useState(String(threshold));
+  const thresholdValue = Number(thresholdInput);
+  const thresholdIsValid =
+    thresholdInput !== "" &&
+    Number.isFinite(thresholdValue) &&
+    thresholdValue >= 0.01 &&
+    thresholdValue <= 1;
+
+  useEffect(() => {
+    setThresholdInput(String(threshold));
+  }, [threshold]);
+
   return (
     <Card className="border-border/60">
       <CardHeader className="pb-4">
@@ -30,18 +43,34 @@ export function AlertsTable({
             <input
               id="alert-threshold"
               type="number"
+              inputMode="decimal"
               min={0.01}
               max={1}
               step="any"
-              value={threshold}
+              value={thresholdInput}
+              aria-invalid={!thresholdIsValid}
+              aria-describedby={!thresholdIsValid ? "alert-threshold-error" : undefined}
               onChange={(event) => {
-                const value = event.currentTarget.valueAsNumber;
-                if (Number.isFinite(value) && value >= 0.01 && value <= 1) {
-                  onThresholdChange(value);
-                }
+                const value = event.currentTarget.value;
+                setThresholdInput(value);
+                const numericValue = Number(value);
+                if (
+                  value !== "" &&
+                  Number.isFinite(numericValue) &&
+                  numericValue >= 0.01 &&
+                  numericValue <= 1
+                ) onThresholdChange(numericValue);
               }}
-              className="w-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              onBlur={() => {
+                if (!thresholdIsValid) setThresholdInput(String(threshold));
+              }}
+              className="w-32 rounded-md border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm"
             />
+            {!thresholdIsValid ? (
+              <span id="alert-threshold-error" className="text-xs text-destructive">
+                Enter a value from 0.01 to 1.
+              </span>
+            ) : null}
           </label>
         </div>
       </CardHeader>

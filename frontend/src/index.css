@@ -124,6 +124,10 @@ body,
   min-height: 100%;
 }
 
+html {
+  color-scheme: dark;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

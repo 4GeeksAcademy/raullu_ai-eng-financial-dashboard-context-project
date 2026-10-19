@@ -2,11 +2,50 @@ import {
   type FinancialMovement,
   type BusinessIncomeComparison,
   type BusinessType,
+  type DashboardUrlState,
   type KPIMetrics,
   type MetricsSummaryItem,
   type MonthlyDataPoint,
   type TopCategoryItem,
 } from "./financial-types";
+
+const DEFAULT_ALERT_THRESHOLD = 0.3;
+
+export function readDashboardUrlState(search: string): DashboardUrlState {
+  const params = new URLSearchParams(search);
+  const threshold = Number(params.get("threshold"));
+
+  return {
+    view: params.get("view") === "comparison" ? "comparison" : "dashboard",
+    startDate: params.get("start_date") ?? "",
+    endDate: params.get("end_date") ?? "",
+    alertThreshold:
+      Number.isFinite(threshold) && threshold >= 0.01 && threshold <= 1
+        ? threshold
+        : DEFAULT_ALERT_THRESHOLD,
+  };
+}
+
+export function writeDashboardUrlState(
+  search: string,
+  state: DashboardUrlState,
+): string {
+  const params = new URLSearchParams(search);
+
+  if (state.view === "dashboard") params.delete("view");
+  else params.set("view", state.view);
+
+  if (state.startDate) params.set("start_date", state.startDate);
+  else params.delete("start_date");
+
+  if (state.endDate) params.set("end_date", state.endDate);
+  else params.delete("end_date");
+
+  if (state.alertThreshold === DEFAULT_ALERT_THRESHOLD) params.delete("threshold");
+  else params.set("threshold", String(state.alertThreshold));
+
+  return params.toString();
+}
 
 function toYearMonthKey(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;

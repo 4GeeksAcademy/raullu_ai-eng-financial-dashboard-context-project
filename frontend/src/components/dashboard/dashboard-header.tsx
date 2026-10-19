@@ -45,7 +45,7 @@ export function DashboardHeader({
               type="date"
               value={startDate}
               onChange={(event) => onStartDateChange(event.target.value)}
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              className="rounded-md border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -54,7 +54,7 @@ export function DashboardHeader({
               type="date"
               value={endDate}
               onChange={(event) => onEndDateChange(event.target.value)}
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              className="rounded-md border border-border bg-background px-3 py-2 text-base text-foreground sm:text-sm"
             />
           </label>
         </div>

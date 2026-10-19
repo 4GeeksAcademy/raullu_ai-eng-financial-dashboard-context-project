@@ -6,13 +6,20 @@ import { IncomeOutcomeChart } from "@/components/dashboard/income-outcome-chart"
 import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart";
 import {
   type BusinessIncomeComparison,
+  type DashboardUrlState,
+  type DashboardView,
   type FinancialMovement,
   type KPIMetrics,
   type MetricsAlert,
   type MetricsFacets,
   type MonthlyDataPoint,
 } from "@/lib/financial-types";
-import { computeKPIs, computeMonthlyData } from "@/lib/financial-utils";
+import {
+  computeKPIs,
+  computeMonthlyData,
+  readDashboardUrlState,
+  writeDashboardUrlState,
+} from "@/lib/financial-utils";
 import { fetchBusinessIncomeComparisons } from "@/lib/comparison-api";
 
 const B2BvsB2CComparison = lazy(() =>
@@ -67,15 +74,18 @@ async function fetchFinancialAlerts(
 }
 
 function App() {
-  const [activeView, setActiveView] = useState<"dashboard" | "comparison">(
-    "dashboard",
+  const [initialUrlState] = useState(() =>
+    readDashboardUrlState(window.location.search),
   );
+  const [activeView, setActiveView] = useState<DashboardView>(initialUrlState.view);
   const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [facets, setFacets] = useState<MetricsFacets | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [alertThreshold, setAlertThreshold] = useState(0.3);
+  const [startDate, setStartDate] = useState(initialUrlState.startDate);
+  const [endDate, setEndDate] = useState(initialUrlState.endDate);
+  const [alertThreshold, setAlertThreshold] = useState(
+    initialUrlState.alertThreshold,
+  );
   const [alerts, setAlerts] = useState<MetricsAlert[]>([]);
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [alertsError, setAlertsError] = useState<string | null>(null);
@@ -85,7 +95,25 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const saveUrlState = (state: DashboardUrlState) => {
+    const query = writeDashboardUrlState(window.location.search, state);
+    const search = query ? `?${query}` : "";
+    if (search === window.location.search) return;
+
+    window.history.pushState(
+      {},
+      "",
+      `${window.location.pathname}${search}${window.location.hash}`,
+    );
+  };
+
   const handleStartDateChange = (value: string) => {
+    saveUrlState({
+      view: activeView,
+      startDate: value,
+      endDate,
+      alertThreshold,
+    });
     setLoading(true);
     setError(null);
     setAlertsLoading(true);
@@ -96,6 +124,12 @@ function App() {
   };
 
   const handleEndDateChange = (value: string) => {
+    saveUrlState({
+      view: activeView,
+      startDate,
+      endDate: value,
+      alertThreshold,
+    });
     setLoading(true);
     setError(null);
     setAlertsLoading(true);
@@ -105,7 +139,8 @@ function App() {
     setEndDate(value);
   };
 
-  const handleViewChange = (view: "dashboard" | "comparison") => {
+  const handleViewChange = (view: DashboardView) => {
+    saveUrlState({ view, startDate, endDate, alertThreshold });
     if (view === "comparison") {
       setComparisonLoading(true);
       setComparisonError(null);
@@ -135,10 +170,35 @@ function App() {
   };
 
   const handleAlertThresholdChange = (value: number) => {
+    saveUrlState({
+      view: activeView,
+      startDate,
+      endDate,
+      alertThreshold: value,
+    });
     setAlertsLoading(true);
     setAlertsError(null);
     setAlertThreshold(value);
   };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const state = readDashboardUrlState(window.location.search);
+      setActiveView(state.view);
+      setStartDate(state.startDate);
+      setEndDate(state.endDate);
+      setAlertThreshold(state.alertThreshold);
+      setLoading(true);
+      setError(null);
+      setAlertsLoading(true);
+      setAlertsError(null);
+      setComparisonLoading(state.view === "comparison");
+      setComparisonError(null);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -70,3 +70,11 @@ Estas son propuestas derivadas del código; no implican decisiones de producto n
 - `docker compose exec frontend npm test`: 7 pruebas pasaron.
 - `docker compose exec frontend npm run lint`: pasó.
 - `docker compose exec frontend npm run build`: pasó. Vite generó chunks de 227.17 kB para el entry, 371.51 kB para gráficos cartesianos y 20.04 kB para la comparativa; no emitió advertencia de tamaño.
+
+## Verificación de mejoras Web Interface Guidelines
+
+- La vista, el rango de fechas y el umbral de alertas se reflejan en la URL; `popstate` restaura los controles y los datos, preservando parámetros ajenos.
+- El umbral permite edición temporal y muestra validación accesible; los campos usan 16 px en móvil. Se actualizó el título de documento y se declaró `color-scheme: dark` con color de tema concordante.
+- `docker compose exec frontend npm test`: 10 pruebas pasaron, incluidas 3 para parseo/escritura de estado de URL.
+- `docker compose exec frontend npm run lint`: pasó.
+- `docker compose exec frontend npm run build`: pasó sin advertencias; entry 228.37 kB, comparativa 20.04 kB y gráficos cartesianos 372.12 kB.
