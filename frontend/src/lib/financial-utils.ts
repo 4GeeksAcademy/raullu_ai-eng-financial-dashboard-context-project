@@ -1,8 +1,51 @@
 import {
   type FinancialMovement,
+  type BusinessIncomeComparison,
+  type BusinessType,
+  type DashboardUrlState,
   type KPIMetrics,
+  type MetricsSummaryItem,
   type MonthlyDataPoint,
+  type TopCategoryItem,
 } from "./financial-types";
+
+const DEFAULT_ALERT_THRESHOLD = 0.3;
+
+export function readDashboardUrlState(search: string): DashboardUrlState {
+  const params = new URLSearchParams(search);
+  const threshold = Number(params.get("threshold"));
+
+  return {
+    view: params.get("view") === "comparison" ? "comparison" : "dashboard",
+    startDate: params.get("start_date") ?? "",
+    endDate: params.get("end_date") ?? "",
+    alertThreshold:
+      Number.isFinite(threshold) && threshold >= 0.01 && threshold <= 1
+        ? threshold
+        : DEFAULT_ALERT_THRESHOLD,
+  };
+}
+
+export function writeDashboardUrlState(
+  search: string,
+  state: DashboardUrlState,
+): string {
+  const params = new URLSearchParams(search);
+
+  if (state.view === "dashboard") params.delete("view");
+  else params.set("view", state.view);
+
+  if (state.startDate) params.set("start_date", state.startDate);
+  else params.delete("start_date");
+
+  if (state.endDate) params.set("end_date", state.endDate);
+  else params.delete("end_date");
+
+  if (state.alertThreshold === DEFAULT_ALERT_THRESHOLD) params.delete("threshold");
+  else params.set("threshold", String(state.alertThreshold));
+
+  return params.toString();
+}
 
 function toYearMonthKey(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
@@ -19,18 +62,39 @@ function formatMonthYearLabel(yearMonthKey: string): string {
 }
 
 export function computeKPIs(movements: FinancialMovement[]): KPIMetrics {
-  const totalIncome = movements
-    .filter((m) => m.operation_type === "income")
-    .reduce((sum, m) => sum + m.amount, 0);
+  let totalIncome = 0;
+  let totalOutcome = 0;
 
-  const totalOutcome = movements
-    .filter((m) => m.operation_type === "outcome")
-    .reduce((sum, m) => sum + m.amount, 0);
+  for (const movement of movements) {
+    if (movement.operation_type === "income") {
+      totalIncome += movement.amount;
+    } else {
+      totalOutcome += movement.amount;
+    }
+  }
 
   const profit = totalIncome - totalOutcome;
   const profitPercent = totalIncome > 0 ? (profit / totalIncome) * 100 : 0;
 
   return { totalIncome, totalOutcome, profit, profitPercent };
+}
+
+export function computeBusinessIncomeComparison(
+  businessType: BusinessType,
+  topCategories: TopCategoryItem[],
+  summaries: MetricsSummaryItem[],
+): BusinessIncomeComparison {
+  const totalIncome = summaries.reduce((sum, item) => sum + item.income, 0);
+  const categories = topCategories
+    .filter((item) => item.operation_type === "income")
+    .map((item) => ({
+      category: item.category,
+      totalIncome: item.total_amount,
+      percentageOfGroup:
+        totalIncome > 0 ? (item.total_amount / totalIncome) * 100 : 0,
+    }));
+
+  return { businessType, totalIncome, categories };
 }
 
 export function computeMonthlyData(
