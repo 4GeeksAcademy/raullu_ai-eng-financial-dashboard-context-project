@@ -1,7 +1,6 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type KeyboardEvent } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { AlertsTable } from "@/components/dashboard/alerts-table";
-import { B2BvsB2CComparison } from "@/components/dashboard/b2b-b2c-comparison";
 import { KPIRow } from "@/components/dashboard/kpi-row";
 import { IncomeOutcomeChart } from "@/components/dashboard/income-outcome-chart";
 import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart";
@@ -16,18 +15,25 @@ import {
 import { computeKPIs, computeMonthlyData } from "@/lib/financial-utils";
 import { fetchBusinessIncomeComparisons } from "@/lib/comparison-api";
 
+const B2BvsB2CComparison = lazy(() =>
+  import("@/components/dashboard/b2b-b2c-comparison").then((module) => ({
+    default: module.B2BvsB2CComparison,
+  })),
+);
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function fetchFinancialData(
   startDate: string,
   endDate: string,
+  signal?: AbortSignal,
 ): Promise<FinancialMovement[]> {
   const query = new URLSearchParams();
   if (startDate) query.set("start_date", startDate);
   if (endDate) query.set("end_date", endDate);
   const queryString = query.toString();
   const url = `${API_BASE_URL}/api/metrics${queryString ? `?${queryString}` : ""}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
   if (!response.ok) {
     throw new Error(`Failed to fetch financial data: ${response.status}`);
   }
@@ -135,19 +141,26 @@ function App() {
   };
 
   useEffect(() => {
-    fetchFinancialData(startDate, endDate)
+    const controller = new AbortController();
+    fetchFinancialData(startDate, endDate, controller.signal)
       .then((movements) => {
         setMetrics(computeKPIs(movements));
         setMonthlyData(computeMonthlyData(movements));
       })
       .catch(() => {
-        setError(
-          "No se pudo cargar la informacion financiera. Revisa la API de backend.",
-        );
+        if (!controller.signal.aborted) {
+          setError(
+            "No se pudo cargar la informacion financiera. Revisa la API de backend.",
+          );
+        }
       })
       .finally(() => {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       });
+
+    return () => controller.abort();
   }, [startDate, endDate]);
 
   useEffect(() => {
@@ -184,13 +197,12 @@ function App() {
   }, [alertThreshold, startDate, endDate]);
 
   useEffect(() => {
-    if (activeView !== "comparison" || !facets) return;
+    if (activeView !== "comparison") return;
 
     const controller = new AbortController();
     fetchBusinessIncomeComparisons(
       startDate,
       endDate,
-      facets.categories,
       controller.signal,
     )
       .then(setComparisons)
@@ -206,7 +218,16 @@ function App() {
       });
 
     return () => controller.abort();
-  }, [activeView, startDate, endDate, facets]);
+  }, [activeView, startDate, endDate]);
+
+  const visibleComparisons = facets
+    ? comparisons.map((comparison) => ({
+        ...comparison,
+        categories: comparison.categories.filter((item) =>
+          facets.categories.includes(item.category),
+        ),
+      }))
+    : [];
 
   return (
     <main className="dark min-h-screen bg-background text-foreground">
@@ -292,11 +313,19 @@ function App() {
             </div>
           ) : (
             <section role="tabpanel" id="comparison-panel" aria-labelledby="comparison-tab" tabIndex={0}>
-              <B2BvsB2CComparison
-                comparisons={comparisons}
-                loading={comparisonLoading}
-                error={comparisonError}
-              />
+              <Suspense
+                fallback={
+                  <p role="status" className="py-10 text-center text-sm text-muted-foreground">
+                    Loading comparison...
+                  </p>
+                }
+              >
+                <B2BvsB2CComparison
+                  comparisons={visibleComparisons}
+                  loading={comparisonLoading || !facets}
+                  error={comparisonError}
+                />
+              </Suspense>
             </section>
           )}
         </div>

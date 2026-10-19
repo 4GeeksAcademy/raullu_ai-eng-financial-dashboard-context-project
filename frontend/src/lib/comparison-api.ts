@@ -1,7 +1,6 @@
 import type {
   BusinessIncomeComparison,
   BusinessType,
-  Category,
   MetricsSummaryItem,
   TopCategoryItem,
 } from "./financial-types";
@@ -26,7 +25,6 @@ async function fetchBusinessComparison(
   businessType: BusinessType,
   startDate: string,
   endDate: string,
-  availableCategories: Category[],
   signal?: AbortSignal,
 ): Promise<BusinessIncomeComparison> {
   const categoryQuery = new URLSearchParams({
@@ -52,10 +50,9 @@ async function fetchBusinessComparison(
     ),
   ]);
 
-  const facetCategories = new Set(availableCategories);
   return computeBusinessIncomeComparison(
     businessType,
-    topCategories.filter((item) => facetCategories.has(item.category)),
+    topCategories,
     summaries,
   );
 }
@@ -63,7 +60,6 @@ async function fetchBusinessComparison(
 export function fetchBusinessIncomeComparisons(
   startDate: string,
   endDate: string,
-  availableCategories: Category[],
   signal?: AbortSignal,
 ): Promise<BusinessIncomeComparison[]> {
   return Promise.all(
@@ -72,7 +68,6 @@ export function fetchBusinessIncomeComparisons(
         businessType,
         startDate,
         endDate,
-        availableCategories,
         signal,
       ),
     ),

@@ -62,3 +62,11 @@ Estas son propuestas derivadas del código; no implican decisiones de producto n
 - `docker compose exec frontend npm run lint`: pasó.
 - `docker compose exec frontend npm run build`: pasó; Vite emitió una advertencia por tamaño de bundle superior a 500 kB.
 - Los criterios se revisaron contra el flujo de frontend y la prueba backend; no se ejecutó una prueba E2E visual del dashboard.
+
+## Verificación de mejoras React
+
+- La vista de comparación se carga bajo demanda; las consultas de comparación comienzan sin esperar a las facetas y las categorías se filtran al presentar resultados para conservar el requisito de la spec.
+- La consulta principal de métricas cancela solicitudes obsoletas al cambiar el rango, y `computeKPIs` suma ingresos y egresos en una sola iteración.
+- `docker compose exec frontend npm test`: 7 pruebas pasaron.
+- `docker compose exec frontend npm run lint`: pasó.
+- `docker compose exec frontend npm run build`: pasó. Vite generó chunks de 227.17 kB para el entry, 371.51 kB para gráficos cartesianos y 20.04 kB para la comparativa; no emitió advertencia de tamaño.
